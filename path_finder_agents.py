@@ -133,11 +133,28 @@ class BBAgent(Agent):
             # If the agent is not stuck
 
             if viable_neighbors:
-                for n in viable_neighbors:
-                    # Append neighbor to the path and add it to the frontier
-                    self.frontier = [path + [n]] + self.frontier
-                    self.cost = [
-                        cost + distance.euclidean(path[-1], n)] + self.cost
+                distances = []
+                for neighbor in viable_neighbors:
+                    distances.append(distance.euclidean(
+                        neighbor, self.percepts['target']))
+
+                for neighbor in viable_neighbors:
+                    n_max = max(distances)
+                    n_pos = distances.index(n_max)
+                    if(n_max <= distance.euclidean(path[-1], self.percepts['target']) + 0.5):
+                        insertFrontier = True
+
+                        for cycle in path:
+                            if(viable_neighbors[n_pos] == cycle).all():
+                                insertFrontier = False
+                                break
+
+                        if insertFrontier:
+                            self.frontier = [
+                                path + [viable_neighbors[n_pos]]] + self.frontier
+                            self.cost = [
+                                cost + distance.euclidean(path[-1], neighbor)] + self.cost
+                    distances[n_pos] = -9999999
 
     def run(self):
         """Keeps the agent acting until it finds the target
