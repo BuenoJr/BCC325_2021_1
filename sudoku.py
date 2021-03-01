@@ -1,3 +1,4 @@
+from typing import cast
 from definitions import Environment
 import numpy as np
 import matplotlib.pyplot as plt
@@ -6,11 +7,10 @@ import copy
 
 class Sudoku(Environment):
     '''Implements a sudoku environment
-
     '''
+
     def __init__(self, sudoku, make_arc_cosistent=True):
         ''' Class constructor
-
         Args:
             sudoku: A matrix representing the sudoku game
             make_arc_cosistent: A flag indicating whether the environment is acr consistent
@@ -33,7 +33,6 @@ class Sudoku(Environment):
 
     def signal(self, action):
         ''' Signals the current state of the problem to the agent 
-
         Args:
             action: Contains the position that the agent wants to change
                 and the value the agent wants to put in that position
@@ -50,7 +49,6 @@ class Sudoku(Environment):
 
     def ini_csp(self):
         ''' Builds a CSP representation of the sudoku game 
-
         '''
 
         for i in range(len(self.sudoku)):
@@ -61,12 +59,14 @@ class Sudoku(Environment):
                     # Cells in the same column
                     for k in range(len(self.sudoku)):
                         if i != k:
-                            constraints.append(DiffConstraint([[i, j], [k, j]]))
+                            constraints.append(
+                                DiffConstraint([[i, j], [k, j]]))
 
                     # Cells in the same row
                     for k in range(len(self.sudoku[0])):
                         if j != k:
-                            constraints.append(DiffConstraint([[i, j], [i, k]]))
+                            constraints.append(
+                                DiffConstraint([[i, j], [i, k]]))
 
                     # Different from other cell in the same group
                     ig = (i // 3) * 3
@@ -75,7 +75,8 @@ class Sudoku(Environment):
                     for ii in range(0, 3):
                         for jj in range(0, 3):
                             if (ii + ig) != i and (jj + jg) != j:
-                                constraints.append(DiffConstraint([[i, j], [(ii + ig), (jj + jg)]]))
+                                constraints.append(DiffConstraint(
+                                    [[i, j], [(ii + ig), (jj + jg)]]))
 
                     self.csp[i].append(
                         {'X': [i, j], 'D': [int(n) for n in range(1, 10)], 'C': copy.deepcopy(constraints)})
@@ -86,20 +87,54 @@ class Sudoku(Environment):
 
     # TODO
     def apply_GAC(self):
-        pass
+        to_do = []
+        for row in self.csp:
+            for cell in row:
+                for const in cell['C']:
+                    to_do.append({'X': cell['X'], 'C': const})    
         
+        removed = []
+        while to_do:   
+            arch = to_do.pop(0)
+            removed.append(arch)
+
+            cons = arch['C']
+            var2 = cons.scope[1]
+            position = arch['X']
+            coordinateX, coordinateY = arch['X']
+
+            viable = []
+            if type(var2) is not int:
+                for e in self.csp[coordinateX][coordinateY]['D']:
+                    viable = viable + \
+                        [any([cons.condition(e, e2)
+                              for e2 in self.csp[var2[0]][var2[1]]['D']])]
+                
+                try:
+                    index = viable.index(False)
+                    del self.csp[coordinateX][coordinateY]['D'][(index)]
+                except ValueError:
+                    pass 
+
+                if not all(viable):
+                    returnToDo = []
+                    for archRemoved in removed:
+                        if (position == archRemoved['C'].scope[1]) and (archRemoved['C'] != cons):
+                            returnToDo.append(archRemoved)
+
+                    for arch in returnToDo:
+                        to_do.append(arch)
+                        removed.remove(arch)
+
 def is_viable(sudoku, i, j, v):
     ''' Auxiliary method that verifies whether a value, v, can be assigned to position [i,j] in the sudoku
-
     Args:
         sudoku: 
         i: row index
         j: column index
         v: value
-
     Returns:
         True if the move is viable or False, otherwise
-
     '''
 
     # Different from other cell in the same row
@@ -124,12 +159,10 @@ def is_viable(sudoku, i, j, v):
     return True
 
 
-
 class Constraint:
     ''' Defines the interface for a constraint 
     
     '''
-
 
     def __init__(self, scope, condition):
         self.scope = scope
@@ -145,7 +178,7 @@ class DiffConstraint(Constraint):
     '''
 
     def __init__(self, scope):
-        condition = lambda a, b: a != b
+        def condition(a, b): return a != b
         Constraint.__init__(self, scope, condition)
 
     def __repr__(self):
@@ -162,7 +195,7 @@ class EqNumConstraint(Constraint):
     '''
 
     def __init__(self, scope):
-        condition = lambda a, b: a == b
+        def condition(a, b): return a == b
         Constraint.__init__(self, scope, condition)
 
     def __repr__(self):
@@ -171,6 +204,3 @@ class EqNumConstraint(Constraint):
     def apply(self, sudoku):
         return self.condition(sudoku[self.scope[0][0]][self.scope[0][1]],
                               self.scope[1])
-
-
-
