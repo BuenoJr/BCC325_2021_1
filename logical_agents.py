@@ -104,8 +104,10 @@ class LogicalAgent():
                         clausesFalses = self.KB.clauses_for_atom('false')
                         add = True
                         for clausesFalse in clausesFalses:
-                            if body in clausesFalse.body and [a in consequenceList for a in clausesFalse.body]:
-                                add = False
+                            if body in clausesFalse.body:
+                                for a in clausesFalse.body:
+                                    if a in consequenceList:
+                                        add = False
 
                         if add:
                             consequenceList.append(body)

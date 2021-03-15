@@ -31,4 +31,4 @@ kb = KB(statements)
 
 kb = KB(statements)
 ag = LogicalAgent(kb)
-print(ag.explain(['chiado', 'não_fumante', 'febre']))
+print(ag.explain(['chiado', 'febre']))
